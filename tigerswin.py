@@ -142,12 +142,11 @@ schedule_link = "https://www.baseball-reference.com/teams/DET/2018-schedule-scor
 schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
 schedule_table = schedule_soup.find("table")
 
-#Index into the first element in the list. I don't know exactly why the "find" function
-# was returning as a list, but indexing into it fixed the issue.
+#Index into the first element in the list. I don't know exactly why the "find"
+# function was returning as a list, but indexing into it fixed the issue.
 schedule_df = pd.read_html(str(schedule_table))[0]
 
-#Get all the games played on the specifc day.
-# We expect this number to be 0 (no game played), 1 (a game was played),
-# or 2 (a double-header was played)
+#Get all the games played on the specifc day. We expect this number to be 0 (no
+# game played), 1 (a game was played), or 2 (a double-header was played)
 games_on_date = schedule_df[schedule_df["Date"].str.contains(key)]
 num_games = games_on_date.shape[0]
