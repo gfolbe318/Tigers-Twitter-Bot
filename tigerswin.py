@@ -2,6 +2,15 @@ from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import pandas as pd
 import datetime
+import tweepy
+from time import sleep
+
+from credentials import *
+
+# Access and authorize Twitter credentials
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+api = tweepy.API(auth)
 
 # Converts a month to a number
 month_to_number = {
@@ -59,6 +68,14 @@ nth = {
     4 : "last"
 }
 
+game = {
+    "result" : "",
+    "opponent" : "",
+    "runs-scored" : "",
+    "runs-allowed" : "",
+    "streak" : ""
+}
+
 # Maps acronym to team name
 MLB_teams = {
     #AL EAST#
@@ -85,6 +102,21 @@ MLB_teams = {
     "ARI" : "Diamondbacks", "COL" : "Rockies", "LAD" : "Dodgers",
     "SDP" : "Padres", "SFG" : "Giants"
 }
+
+def print_standings(position, games_back, other_team):
+    behindOrAhead = "ahead"
+    if position != "1st":
+        behindOrAhead = "behind"
+
+    dummy_string = (
+        "They are " + position + "in the AL Central, " +
+        games_back + "games" + behindOrAhead + "the " +
+        MLB_teams[other_team]
+    )
+
+    return dummy_string    
+
+
 
 def get_day_before(date):
     orig_month, orig_day = date.split(" ")
@@ -128,7 +160,7 @@ else:
     games_back = str(AL_standings_df.at[tigers_row, 'GB'])
 
 # Map the position of the tigers to an appropriate place.
-place = nth[tigers_row - 7]
+position = nth[tigers_row - 7]
 
 # This next section of code will get us the current date and create a key to
 # look into the Tigers's schedule
@@ -138,7 +170,7 @@ key = number_to_month[month] + " " + str(day)
 key = get_day_before(key)
 
 # Scrapes schedule
-schedule_link = "https://www.baseball-reference.com/teams/DET/2018-schedule-scores.shtml"
+schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
 schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
 schedule_table = schedule_soup.find("table")
 
@@ -150,3 +182,10 @@ schedule_df = pd.read_html(str(schedule_table))[0]
 # game played), 1 (a game was played), or 2 (a double-header was played)
 games_on_date = schedule_df[schedule_df["Date"].str.contains(key)]
 num_games = games_on_date.shape[0]
+
+
+
+
+# We must now create a string of what will be tweeted
+tweet_string = ""
+

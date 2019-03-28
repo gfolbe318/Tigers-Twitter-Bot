@@ -1,0 +1,27 @@
+The Tigers did not play yesterday.
+
+They are RANK in the AL Central, GB games AHEAD/BEHIND the TEAM.
+
+Their current record is RECORD, and they are on a # GAME WINNING STREAK.
+
+
+------------------------------------------------------------------
+
+
+The Tigers WON/LOST yesterday to the OPPONENT, SCORE. 
+
+They are RANK in the AL Central, GB games AHEAD/BEHIND the TEAM.
+
+Their current record is RECORD, and they are on a # GAME WINNING STREAK.
+
+
+-------------------------------------------------------------------
+
+
+The Tigers had a doubleheader against the OPPONENT yesterday. 
+
+They WON/LOST the first game, SCORE, and WON/LOST the second game, SCORE.
+
+They are RANK in the AL Central, GB games AHEAD/BEHIND the TEAM.
+
+Their current record is RECORD, and they are on a # GAME WINNING STREAK.
