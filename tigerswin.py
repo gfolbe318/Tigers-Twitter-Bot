@@ -3,9 +3,11 @@ from urllib.request import urlopen
 import pandas as pd
 import datetime
 import tweepy
+import inflect
 from time import sleep
 
 from credentials import *
+p = inflect.engine()
 
 # Access and authorize Twitter credentials
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
@@ -68,12 +70,9 @@ nth = {
     4 : "last"
 }
 
-game = {
-    "result" : "",
-    "opponent" : "",
-    "runs-scored" : "",
-    "runs-allowed" : "",
-    "streak" : ""
+win_loss = {
+    "W" : "won",
+    "L" : "lost"
 }
 
 # Maps acronym to team name
@@ -103,19 +102,36 @@ MLB_teams = {
     "SDP" : "Padres", "SFG" : "Giants"
 }
 
-def print_standings(position, games_back, other_team):
+def get_standings(position, games_back, other_team):
     behindOrAhead = "ahead"
     if position != "1st":
         behindOrAhead = "behind"
 
     dummy_string = (
-        "They are " + position + "in the AL Central, " +
-        games_back + "games" + behindOrAhead + "the " +
-        MLB_teams[other_team]
+        "The Tigers are " + position + " in the AL Central, " +
+        games_back + " games " + behindOrAhead + " the " +
+        MLB_teams[other_team] + "\n"
     )
 
     return dummy_string    
 
+def get_record(record, streak):
+    typeStreak = "winning"
+    if streak.find('-') != -1:
+        typeStreak = "losing"
+
+    num = str(len(streak))
+    english_length = p.number_to_words(num)
+
+    helper = p.a(english_length)
+    correctUsage = helper.split(" ")[0]
+
+    dummy_string = (
+        "Their current record is " + record + ", and they are on " +
+        correctUsage + " " + num + " game " + typeStreak + " streak."
+    )
+
+    return dummy_string
 
 
 def get_day_before(date):
@@ -148,9 +164,10 @@ AL_standings_df = pd.read_html(str(standings))[0]
 division_leader = AL_standings_df.at[7, "AL"]
 
 # If the leader is Detroit, find out how many games they are up by, and who is
-# in second place
+# in second place. Use other_team to keep track of the other team we care about.
+# This is either the division leader, or the second place team
 if division_leader == "DET":
-    second_place = AL_standings_df.at[8, "AL"]
+    other_team = AL_standings_df.at[8, "AL"]
     games_back = str(AL_standings_df.at[8, "GB"])
 
 # If the Tigers are not leading the division, who is? How many games back are
@@ -158,6 +175,7 @@ if division_leader == "DET":
 else:
     tigers_row = AL_standings_df.loc[AL_standings_df['AL'] == "DET"].index[0]
     games_back = str(AL_standings_df.at[tigers_row, 'GB'])
+    other_team = division_leader
 
 # Map the position of the tigers to an appropriate place.
 position = nth[tigers_row - 7]
@@ -168,9 +186,10 @@ date = str(datetime.datetime.now()).split(" ")[0]
 year, month, day = date.split("-")
 key = number_to_month[month] + " " + str(day)
 key = get_day_before(key)
+key = "Jun 27"
 
 # Scrapes schedule
-schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
+schedule_link = "https://www.baseball-reference.com/teams/DET/" + "2018" + "-schedule-scores.shtml"
 schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
 schedule_table = schedule_soup.find("table")
 
@@ -181,11 +200,30 @@ schedule_df = pd.read_html(str(schedule_table))[0]
 # Get all the games played on the specifc day. We expect this number to be 0 (no
 # game played), 1 (a game was played), or 2 (a double-header was played)
 games_on_date = schedule_df[schedule_df["Date"].str.contains(key)]
+games_on_date = games_on_date.reset_index(drop = True)
 num_games = games_on_date.shape[0]
 
 
+game = {}
+game["result"] = games_on_date.at[0, "W/L"]
+game["opponent"] = games_on_date.at[0, "Opp"]
+game["runs-scored"] = games_on_date.at[0, "R"]
+game["runs-allowed"] = games_on_date.at[0, "RA"]
 
+record = games_on_date.at[0, "W-L"]
+streak = games_on_date.at[0, "Streak"]
+
+game2 = {}
+if num_games == 2:
+    game2["result"] = games_on_date.at[1, "W/L"]
+    game2["opponent"] = games_on_date.at[1, "Opp"]
+    game2["runs-scored"] = games_on_date.at[1, "R"]
+    game2["runs-allowed"] = games_on_date.at[1, "RA"]
+    
+    record = games_on_date.at[1, "W-L"]
+    streak = games_on_date.at[1, "Streak"]
 
 # We must now create a string of what will be tweeted
-tweet_string = ""
-
+standings_line = get_standings(position, games_back, other_team)
+streak_line = get_record(record, streak)
+print(streak_line)
