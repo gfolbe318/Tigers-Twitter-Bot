@@ -72,7 +72,9 @@ nth = {
 
 win_loss = {
     "W" : "won",
-    "L" : "lost"
+    "W-wo" : "won",
+    "L" : "lost",
+    "L-wo" : "lost"
 }
 
 # Maps acronym to team name
@@ -186,7 +188,7 @@ date = str(datetime.datetime.now()).split(" ")[0]
 year, month, day = date.split("-")
 key = number_to_month[month] + " " + str(day)
 key = get_day_before(key)
-key = "Jun 27"
+key = "Sep 8"
 
 # Scrapes schedule
 schedule_link = "https://www.baseball-reference.com/teams/DET/" + "2018" + "-schedule-scores.shtml"
