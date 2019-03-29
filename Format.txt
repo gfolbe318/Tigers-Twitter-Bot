@@ -8,7 +8,7 @@ Their current record is RECORD, and they are on a # GAME WINNING STREAK.
 ------------------------------------------------------------------
 
 
-The Tigers WON/LOST yesterday to the OPPONENT, SCORE. 
+Yesterday, the Tigers BEAT/LOST TO the OPPONENT, SCORE.
 
 They are RANK in the AL Central, GB games AHEAD/BEHIND the TEAM.
 

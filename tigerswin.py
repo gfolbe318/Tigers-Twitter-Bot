@@ -70,11 +70,18 @@ nth = {
     4 : "last"
 }
 
-win_loss = {
+win_loss_single = {
+    "W" : "beat the",
+    "W-wo" : "beat the",
+    "L" : "lost to the",
+    "L-wo" : "lost to the"
+}
+
+win_loss_double = {
     "W" : "won",
     "W-wo" : "won",
     "L" : "lost",
-    "L-wo" : "lost"
+    "L-wo" : "lost" 
 }
 
 # Maps acronym to team name
@@ -103,6 +110,15 @@ MLB_teams = {
     "ARI" : "Diamondbacks", "COL" : "Rockies", "LAD" : "Dodgers",
     "SDP" : "Padres", "SFG" : "Giants"
 }
+
+def print_score(runs_scored, runs_allowed):
+    if runs_scored > runs_allowed:
+        return runs_scored + "-" + runs_allowed
+    else:
+        return runs_allowed + "-" + runs_scored
+
+def get_result_no_game():
+    return "The Tigers did not play yesterday"
 
 def get_standings(position, games_back, other_team):
     behindOrAhead = "ahead"
@@ -225,7 +241,10 @@ if num_games == 2:
     record = games_on_date.at[1, "W-L"]
     streak = games_on_date.at[1, "Streak"]
 
+
+
+
 # We must now create a string of what will be tweeted
+result_line = ""
 standings_line = get_standings(position, games_back, other_team)
 streak_line = get_record(record, streak)
-print(streak_line)
