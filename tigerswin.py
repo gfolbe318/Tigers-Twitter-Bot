@@ -244,14 +244,21 @@ def get_record(record, streak):
     helper = p.a(english_length)
     correctUsage = helper.split(" ")[0]
 
-    return (
-        "Their current record is " + record + ", and they are on " +
-        correctUsage + " " + num + " game " + typeStreak + " streak."
+    dummy_string = "Their current record is " + record
+
+    # If the Tigers didn't play, I ignore their streak and just print their 
+    # record. Otherwise, I print their streak
+    if streak != "NIL":
+        dummy_string +=  (
+            ", and they are on " + correctUsage + " " + num 
+            + " game " + typeStreak + " streak."
     )
+
+    return dummy_string
 
 # I'm printing out what happened last night, so I want to get the day before.
 def get_day_before(date):
-    orig_month, orig_day = date.split(" ")
+    orig_month, orig_day, year = date.split(" ")
     new_day = ""
     new_month = ""
 
@@ -268,82 +275,107 @@ def get_day_before(date):
         new_day = days_in_month[new_month]
 
     # Get the correct index of the day of the week. Monday is 0, Tuesday is 1, and so on.
-    index = datetime.date(int(year), int(month), int(day)).weekday()
-    
-    # The day before monday is sunday. Otherwise, subtract one day
-    if index == 0:
-        index = 6
-    else:
-        index -= 1    
+    index = datetime.date(int(year), int(month_to_number[new_month]), int(new_day)).weekday()
     weekday = days_list[index]
     return weekday + ", " + new_month + " " + new_day
 
-# This section of code is used to scrape the homepage of baseball-reference and
-# find out the current standings of the AL Central. 
-homepage_link = "https://www.baseball-reference.com/"
-link_soup = BeautifulSoup(urlopen(homepage_link), "lxml")
-standings = link_soup.find_all("table")
-AL_standings_df = pd.read_html(str(standings))[0]
-AL_Central_Standings = AL_standings_df[7:12].reset_index(drop = True)
+def driver():
+    # This section of code is used to scrape the homepage of baseball-reference and
+    # find out the current standings of the AL Central. 
+    homepage_link = "https://www.baseball-reference.com/"
+    link_soup = BeautifulSoup(urlopen(homepage_link), "lxml")
+    standings = link_soup.find_all("table")
+    AL_standings_df = pd.read_html(str(standings))[0]
+    AL_Central_Standings = AL_standings_df[7:12].reset_index(drop = True)
 
-# This next section of code will get us the current date and create a key to
-# look into the Tigers's schedule
-date = str(datetime.datetime.now()).split(" ")[0]
-year, month, day = date.split("-")
-key = number_to_month[month] + " " + str(day)
-key = get_day_before(key)
+    # This next section of code will get us the current date and create a key to
+    # look into the Tigers's schedule
+    date = str(datetime.datetime.now()).split(" ")[0]
+    year, month, day = date.split("-")
+    key = number_to_month[month] + " " + str(day) + " " + year
+    key = get_day_before(key)
+    key = "Monday, Apr 1"
 
-# Scrapes schedule
-schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
-schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
+    # Scrapes schedule
+    schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
+    schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
 
-# Index into the first element in the list. I don't know exactly why the "find"
-# function was returning as a list, but indexing into it fixed the issue.
-schedule_table = schedule_soup.find("table")
-schedule_df = pd.read_html(str(schedule_table))[0]
+    # Index into the first element in the list. I don't know exactly why the "find"
+    # function was returning as a list, but indexing into it fixed the issue.
+    schedule_table = schedule_soup.find("table")
+    schedule_df = pd.read_html(str(schedule_table))[0]
 
-# Get all the games played on the specifc day. We expect this number to be 0 (no
-# game played), 1 (a game was played), or 2 (a double-header was played)
-games_on_date = schedule_df[schedule_df["Date"].str.contains(key)]
-games_on_date = games_on_date.reset_index(drop = True)
-num_games = games_on_date.shape[0]
-
-# Correctly select the information about the game we need from the row
-game = {}
-game["result"] = games_on_date.at[0, "W/L"]
-game["opponent"] = games_on_date.at[0, "Opp"]
-game["runs-scored"] = games_on_date.at[0, "R"]
-game["runs-allowed"] = games_on_date.at[0, "RA"]
-
-# Get the record of the Tigers and their current streak
-record = games_on_date.at[0, "W-L"]
-streak = games_on_date.at[0, "Streak"]
-
-# If there was a double header, get the information of that game too
-game2 = {}
-if num_games == 2:
-    game2["result"] = games_on_date.at[1, "W/L"]
-    game2["opponent"] = games_on_date.at[1, "Opp"]
-    game2["runs-scored"] = games_on_date.at[1, "R"]
-    game2["runs-allowed"] = games_on_date.at[1, "RA"]
+    # Filters out annoying rows that act as buffers to separate months
+    games_only = schedule_df[schedule_df["Date"].str.contains(",")].reset_index(drop = True)
     
-    # Overwrite the streak and the record to get the more recent info
-    record = games_on_date.at[1, "W-L"]
-    streak = games_on_date.at[1, "Streak"]
+    # SHOULD be 162, but sometimes teams will only play 161 if the last game is meaningless
+    games_in_season = games_only.shape[0]
 
-# We must now create a string of what will be tweeted. Correctly select
-# which function to call based on the number of games.
-if num_games == 0:
-    result_string = get_result_no_game()
-if num_games == 1:
-    result_string = get_result_one_game(game)
-if num_games == 2:
-    result_string = get_result_two_games(game, game2)
+    # Get all the games played on the specifc day. We expect this number to be 0 (no
+    # game played), 1 (a game was played), or 2 (a double-header was played)
+    games_on_date = games_only[games_only["Date"] == key].reset_index(drop = True)
+    num_games = games_on_date.shape[0]
 
-standings_line = get_standings(AL_Central_Standings)
-streak_line = get_record(record, streak)
+    if num_games == 0:
+        tigers_row = AL_Central_Standings.loc[AL_Central_Standings['AL'] == "DET"].index[0]
+        record = (
+                AL_Central_Standings.at[tigers_row, "W"] + "-" +
+                AL_Central_Standings.at[tigers_row, "L"] + "."
+        )
+        streak = "NIL"            
 
-# Print out our tweet!
-tweet = result_string + "\n" + standings_line + "\n" + streak_line
+    # Correctly select the information about the game we need from the row
+    game = {}
+    if num_games == 1:
+        game["result"] = games_on_date.at[0, "W/L"]
+        game["opponent"] = games_on_date.at[0, "Opp"]
+        game["runs-scored"] = games_on_date.at[0, "R"]
+        game["runs-allowed"] = games_on_date.at[0, "RA"]
 
-api.update_status(tweet)
+        # Get the record of the Tigers and their current streak
+        record = games_on_date.at[0, "W-L"]
+        streak = games_on_date.at[0, "Streak"]
+
+    # If there was a double header, get the information of that game too
+    game2 = {}
+    if num_games == 2:
+        game2["result"] = games_on_date.at[1, "W/L"]
+        game2["opponent"] = games_on_date.at[1, "Opp"]
+        game2["runs-scored"] = games_on_date.at[1, "R"]
+        game2["runs-allowed"] = games_on_date.at[1, "RA"]
+        
+        # Overwrite the streak and the record to get the more recent info
+        record = games_on_date.at[1, "W-L"]
+        streak = games_on_date.at[1, "Streak"]
+
+    # We must now create a string of what will be tweeted. Correctly select
+    # which function to call based on the number of games.
+    if num_games == 0:
+        result_string = get_result_no_game()
+    if num_games == 1:
+        result_string = get_result_one_game(game)
+    if num_games == 2:
+        result_string = get_result_two_games(game, game2)
+
+    standings_line = get_standings(AL_Central_Standings)
+    streak_line = get_record(record, streak)
+
+    str_wins, str_losses = record.split("-")
+    games_played = int(str_wins) + int(str_losses)
+
+    end_of_season_flag = False
+
+    if games_played == games_in_season:
+        if not end_of_season_flag:
+            tweet = "The Tigers season is over. They finished " #add the record and something else. Also need to deal with what to print every day of the offseason
+
+    else:
+        tweet = result_string + "\n" + standings_line + "\n" + streak_line
+    
+    return tweet
+
+
+while True:
+    tweet = driver()
+    api.update_status(tweet)
+    sleep(60*60*24)
