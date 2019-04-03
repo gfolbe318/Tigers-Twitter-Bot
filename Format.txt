@@ -2,7 +2,7 @@ The Tigers did not play yesterday.
 
 VARIOUS WAYS TO PRINT STANDINGS INFO
 
-Their current record is RECORD, and they are on a # GAME WINNING STREAK.
+Their current record is RECORD
 
 
 ------------------------------------------------------------------
