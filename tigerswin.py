@@ -63,11 +63,11 @@ month_list = [
 
 # Used to tell the place of the Tigers
 nth = {
-    0 : "first",
-    1 : "second",
-    2 : "third",
-    3 : "fourth",
-    4 : "last"
+    0 : "1st",
+    1 : "2nd",
+    2 : "3rd",
+    3 : "4th",
+    4 : "5th"
 }
 
 win_loss_single = {
@@ -120,18 +120,75 @@ def print_score(runs_scored, runs_allowed):
 def get_result_no_game():
     return "The Tigers did not play yesterday"
 
-def get_standings(position, games_back, other_team):
-    behindOrAhead = "ahead"
-    if position != "1st":
-        behindOrAhead = "behind"
+def get_standings(standings):
+    games_back = ""
+    position = ""
+    other_team = ""
+    tied_with = ""
 
-    dummy_string = (
-        "The Tigers are " + position + " in the AL Central, " +
-        games_back + " games " + behindOrAhead + " the " +
-        MLB_teams[other_team] + "\n"
-    )
+    # Find out what row the tigers are in
+    tigers_row = standings.loc[standings['AL'] == "DET"].index[0]
 
-    return dummy_string    
+    # If they are in first place, we find how many teams they are tied with
+    if tigers_row == 0 or standings.at[tigers_row, "GB"] == "--":
+        num_teams_tied = 0
+        for i in range(0, 5):
+            if standings.at[i, "GB"] == "--":
+                num_teams_tied += 1
+            else:
+                break
+
+        # If they are tied with one team (themselves), they are leading the
+        # division outright
+        if num_teams_tied == 1:
+            games_back = standings.at[1, "GB"]
+            
+            # Avoid printing "X.0 games" (unnecessary decimals)
+            full_games = games_back.split(".")
+            if full_games[1] == "0":
+                games_back = full_games[0]
+
+            return (
+                "They are first in the AL Central with a " + 
+                games_back + " lead.\n"
+            )
+
+        # If they are tied with one other team, find out who the other team 
+        # is by looking at the other row
+        elif num_teams_tied == 2:
+            if tigers_row == 0:
+                other_team = standings.at[1, "AL"]
+            else:
+                other_team = standings.at[0, "AL"]
+            return(
+                "They are tied for first in the AL Central with the " 
+                + MLB_teams[other_team] + ".\n"
+            )
+
+        # Otherwise, there is a multiple team tie for first.
+        elif num_teams_tied > 2:
+            return(
+                "They are in a " + num_teams_tied + 
+                "-way tie for first in the AL Central.\n"
+            )
+    
+    # If the Tigers aren't in first, where are they?
+    else:
+        position = p.ordinal(tigers_row + 1)
+        games_back = standings.at[tigers_row, "GB"]
+
+        # Avoid printing "X.0 games" (unnecessary decimals)
+        full_games = games_back.split(".")
+        if full_games[1] == "0":
+            games_back = full_games[0]
+
+        # Stupid syntax to add an s if games_back == "1"
+        do_I_need_an_s = "s" if games_back != "1" else "" 
+ 
+        return(
+            "They are in " + position + " place in the AL Central, " +
+            "trailing by " + games_back + " game" + do_I_need_an_s + ".\n"
+        ) 
 
 def get_record(record, streak):
     typeStreak = "winning"
@@ -177,26 +234,7 @@ homepage_link = "https://www.baseball-reference.com/"
 link_soup = BeautifulSoup(urlopen(homepage_link), "lxml")
 standings = link_soup.find_all("table")
 AL_standings_df = pd.read_html(str(standings))[0]
-
-# Who is leading the division?
-division_leader = AL_standings_df.at[7, "AL"]
-
-# If the leader is Detroit, find out how many games they are up by, and who is
-# in second place. Use other_team to keep track of the other team we care about.
-# This is either the division leader, or the second place team
-if division_leader == "DET":
-    other_team = AL_standings_df.at[8, "AL"]
-    games_back = str(AL_standings_df.at[8, "GB"])
-
-# If the Tigers are not leading the division, who is? How many games back are
-# the Tigers?
-else:
-    tigers_row = AL_standings_df.loc[AL_standings_df['AL'] == "DET"].index[0]
-    games_back = str(AL_standings_df.at[tigers_row, 'GB'])
-    other_team = division_leader
-
-# Map the position of the tigers to an appropriate place.
-position = nth[tigers_row - 7]
+AL_Central_Standings = AL_standings_df[7:12].reset_index(drop = True)
 
 # This next section of code will get us the current date and create a key to
 # look into the Tigers's schedule
@@ -204,10 +242,9 @@ date = str(datetime.datetime.now()).split(" ")[0]
 year, month, day = date.split("-")
 key = number_to_month[month] + " " + str(day)
 key = get_day_before(key)
-key = "Sep 8"
 
 # Scrapes schedule
-schedule_link = "https://www.baseball-reference.com/teams/DET/" + "2018" + "-schedule-scores.shtml"
+schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
 schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
 schedule_table = schedule_soup.find("table")
 
@@ -220,7 +257,6 @@ schedule_df = pd.read_html(str(schedule_table))[0]
 games_on_date = schedule_df[schedule_df["Date"].str.contains(key)]
 games_on_date = games_on_date.reset_index(drop = True)
 num_games = games_on_date.shape[0]
-
 
 game = {}
 game["result"] = games_on_date.at[0, "W/L"]
@@ -246,5 +282,10 @@ if num_games == 2:
 
 # We must now create a string of what will be tweeted
 result_line = ""
-standings_line = get_standings(position, games_back, other_team)
+
+
+standings_line = get_standings(AL_Central_Standings)
+print(standings_line)
+
+
 streak_line = get_record(record, streak)
