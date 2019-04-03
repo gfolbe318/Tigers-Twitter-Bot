@@ -1,3 +1,11 @@
+"""
+Code written by Garrett Folbe in March and April of 2019. For more information
+on the work I did, or if you have any questions/concerns about the code, please
+email me at gmfolbe@yahoo.com. All information is webscraped from
+baseball-reference.com with a maximum of 1 request made to their website every 24
+hours (approximately)
+"""
+
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import pandas as pd
@@ -270,7 +278,7 @@ def get_day_before(date):
     weekday = days_list[index]
     return weekday + ", " + new_month + " " + new_day
 
-# This section of code is used to scrape the homepage of baseball reference and
+# This section of code is used to scrape the homepage of baseball-reference and
 # find out the current standings of the AL Central. 
 homepage_link = "https://www.baseball-reference.com/"
 link_soup = BeautifulSoup(urlopen(homepage_link), "lxml")
@@ -288,10 +296,10 @@ key = get_day_before(key)
 # Scrapes schedule
 schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
 schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
-schedule_table = schedule_soup.find("table")
 
 # Index into the first element in the list. I don't know exactly why the "find"
 # function was returning as a list, but indexing into it fixed the issue.
+schedule_table = schedule_soup.find("table")
 schedule_df = pd.read_html(str(schedule_table))[0]
 
 # Get all the games played on the specifc day. We expect this number to be 0 (no
