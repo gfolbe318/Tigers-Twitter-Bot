@@ -2,8 +2,8 @@
 Code written by Garrett Folbe in March and April of 2019. For more information
 on the work I did, or if you have any questions/concerns about the code, please
 email me at gmfolbe@yahoo.com. All information is webscraped from
-baseball-reference.com with a maximum of 1 request made to their website every 24
-hours (approximately)
+baseball-reference.com with a maximum of 1 request made to their website every
+24 hours (approximately)
 """
 
 from bs4 import BeautifulSoup
@@ -246,7 +246,7 @@ def get_record(record, streak):
 
     dummy_string = "Their current record is " + record
 
-    # If the Tigers didn't play, I ignore their streak and just print their 
+    # If the Tigers didn't play, I ignore their streak and just print their
     # record. Otherwise, I print their streak
     if streak != "NIL":
         dummy_string +=  (
@@ -274,14 +274,15 @@ def get_day_before(date):
         new_month = month_list[int(month_to_number[orig_month]) - 2]
         new_day = days_in_month[new_month]
 
-    # Get the correct index of the day of the week. Monday is 0, Tuesday is 1, and so on.
+    # Get the correct index of the day of the week. Monday is 0, Tuesday is 1,
+    # and so on.
     index = datetime.date(int(year), int(month_to_number[new_month]), int(new_day)).weekday()
     weekday = days_list[index]
     return weekday + ", " + new_month + " " + new_day
 
 def driver():
-    # This section of code is used to scrape the homepage of baseball-reference and
-    # find out the current standings of the AL Central. 
+    # This section of code is used to scrape the homepage of baseball-reference
+    # and find out the current standings of the AL Central. 
     homepage_link = "https://www.baseball-reference.com/"
     link_soup = BeautifulSoup(urlopen(homepage_link), "lxml")
     standings = link_soup.find_all("table")
@@ -294,25 +295,22 @@ def driver():
     year, month, day = date.split("-")
     key = number_to_month[month] + " " + str(day) + " " + year
     key = get_day_before(key)
-    key = "Monday, Apr 1"
 
     # Scrapes schedule
     schedule_link = "https://www.baseball-reference.com/teams/DET/" + year + "-schedule-scores.shtml"
     schedule_soup = BeautifulSoup(urlopen(schedule_link), "lxml")
 
-    # Index into the first element in the list. I don't know exactly why the "find"
-    # function was returning as a list, but indexing into it fixed the issue.
+    # Index into the first element in the list. I don't know exactly why the
+    # "find" function was returning as a list, but indexing into it fixed the
+    # issue.
     schedule_table = schedule_soup.find("table")
     schedule_df = pd.read_html(str(schedule_table))[0]
 
     # Filters out annoying rows that act as buffers to separate months
     games_only = schedule_df[schedule_df["Date"].str.contains(",")].reset_index(drop = True)
-    
-    # SHOULD be 162, but sometimes teams will only play 161 if the last game is meaningless
-    games_in_season = games_only.shape[0]
 
-    # Get all the games played on the specifc day. We expect this number to be 0 (no
-    # game played), 1 (a game was played), or 2 (a double-header was played)
+    # Get all the games played on the specifc day. We expect this number to be 0
+    # (no game played), 1 (a game was played), or 2 (a double-header was played)
     games_on_date = games_only[games_only["Date"] == key].reset_index(drop = True)
     num_games = games_on_date.shape[0]
 
@@ -360,20 +358,53 @@ def driver():
     standings_line = get_standings(AL_Central_Standings)
     streak_line = get_record(record, streak)
 
+    # Get the total number of games played
     str_wins, str_losses = record.split("-")
     games_played = int(str_wins) + int(str_losses)
+        
+    # SHOULD be 162, but sometimes teams will only play 161 if a game can't be
+    # made up
+    games_in_season = games_only.shape[0]
+    
+    # Flag to determine if we will print the extended end of game season message
+    # or not
+    flag = True
 
-    end_of_season_flag = False
-
+    # If the tigers just played their last game of the season...
     if games_played == games_in_season:
-        if not end_of_season_flag:
-            tweet = "The Tigers season is over. They finished " #add the record and something else. Also need to deal with what to print every day of the offseason
 
+        # Get their rank and their final record. The -1 deals with the case of a
+        # doubleheader. We won't have an error here unless the last game of the
+        # season ends in a rain delay. 
+        tigers_finish = games_on_date.at[num_games - 1, "Rank"]
+        rank = p.ordinal(int(tigers_finish))
+        end_of_season_str = (
+            "The Tigers season is over. They finished " + rank +
+            " in the AL Central with a record of " + record + 
+            ". Thanks for a great season! #BlessYouBoys"
+        )
+
+        # Only tweet the extended message once...
+        if flag:
+            tweet = result_string + end_of_season_str
+            flag = False #set so that we won't print it next time around
+
+        # Otherwise, print the short message
+        else:
+            tweet = "The Tigers did not play yesterday."
+
+    # If it's not the end of the season, just go about business as normal
     else:
         tweet = result_string + "\n" + standings_line + "\n" + streak_line
-    
-    return tweet
+        # We set this flag to true because we know that a game has been played,
+        # thus signaling the end of the offseason. I can't really test this
+        # code, so I'm hoping that it works...
+        flag = True
 
+    # No idea what to do with playoffs, will get there another time... It's not
+    # like the Tigers are making it any time soon...
+
+    return tweet
 
 while True:
     tweet = driver()
