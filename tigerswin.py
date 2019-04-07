@@ -253,6 +253,8 @@ def get_record(record, streak):
             ", and they are on " + correctUsage + " " + num 
             + " game " + typeStreak + " streak."
     )
+    else:
+        dummy_string += "."
 
     return dummy_string
 
@@ -318,7 +320,7 @@ def driver():
         tigers_row = AL_Central_Standings.loc[AL_Central_Standings['AL'] == "DET"].index[0]
         record = (
                 AL_Central_Standings.at[tigers_row, "W"] + "-" +
-                AL_Central_Standings.at[tigers_row, "L"] + "."
+                AL_Central_Standings.at[tigers_row, "L"]
         )
         streak = "NIL"            
 
@@ -358,10 +360,12 @@ def driver():
     standings_line = get_standings(AL_Central_Standings)
     streak_line = get_record(record, streak)
 
+
     # Get the total number of games played
+    print(record)
     str_wins, str_losses = record.split("-")
     games_played = int(str_wins) + int(str_losses)
-        
+
     # SHOULD be 162, but sometimes teams will only play 161 if a game can't be
     # made up
     games_in_season = games_only.shape[0]
