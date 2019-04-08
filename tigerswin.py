@@ -183,7 +183,7 @@ def get_standings(standings):
 
             return (
                 "They are first in the AL Central with a " + 
-                games_back + " lead.\n"
+                games_back + " game lead.\n"
             )
 
         # If they are tied with one other team, find out who the other team is
@@ -362,7 +362,6 @@ def driver():
 
 
     # Get the total number of games played
-    print(record)
     str_wins, str_losses = record.split("-")
     games_played = int(str_wins) + int(str_losses)
 
