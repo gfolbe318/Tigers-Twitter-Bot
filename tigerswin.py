@@ -143,6 +143,8 @@ def get_result_one_game(game):
 
 # Print out the result of a doubleheader
 def get_result_two_games(game1, game2):
+    print(game1)
+    print(game2)
     return(
         "Yesteday, the Tigers had a doubleheader against the " +
         MLB_teams[game1["opponent"]] + ".\nThey " + win_loss_double[game1["result"]] +
@@ -313,8 +315,12 @@ def driver():
 
     # Get all the games played on the specifc day. We expect this number to be 0
     # (no game played), 1 (a game was played), or 2 (a double-header was played)
-    games_on_date = games_only[games_only["Date"] == key].reset_index(drop = True)
+    games_on_date = games_only[games_only["Date"].str.contains(key)].reset_index(drop = True)
     num_games = games_on_date.shape[0]
+
+    print(key)
+    print(games_on_date)
+    print(num_games)
 
     if num_games == 0:
         tigers_row = AL_Central_Standings.loc[AL_Central_Standings['AL'] == "DET"].index[0]
@@ -325,8 +331,8 @@ def driver():
         streak = "NIL"            
 
     # Correctly select the information about the game we need from the row
-    game = {}
-    if num_games == 1:
+    else:
+        game = {}
         game["result"] = games_on_date.at[0, "W/L"]
         game["opponent"] = games_on_date.at[0, "Opp"]
         game["runs-scored"] = games_on_date.at[0, "R"]
@@ -336,17 +342,17 @@ def driver():
         record = games_on_date.at[0, "W-L"]
         streak = games_on_date.at[0, "Streak"]
 
-    # If there was a double header, get the information of that game too
-    game2 = {}
-    if num_games == 2:
-        game2["result"] = games_on_date.at[1, "W/L"]
-        game2["opponent"] = games_on_date.at[1, "Opp"]
-        game2["runs-scored"] = games_on_date.at[1, "R"]
-        game2["runs-allowed"] = games_on_date.at[1, "RA"]
-        
-        # Overwrite the streak and the record to get the more recent info
-        record = games_on_date.at[1, "W-L"]
-        streak = games_on_date.at[1, "Streak"]
+        # If there was a double header, get the information of that game too
+        if num_games == 2:
+            game2 = {}
+            game2["result"] = games_on_date.at[1, "W/L"]
+            game2["opponent"] = games_on_date.at[1, "Opp"]
+            game2["runs-scored"] = games_on_date.at[1, "R"]
+            game2["runs-allowed"] = games_on_date.at[1, "RA"]
+            
+            # Overwrite the streak and the record to get the more recent info
+            record = games_on_date.at[1, "W-L"]
+            streak = games_on_date.at[1, "Streak"]
 
     # We must now create a string of what will be tweeted. Correctly select
     # which function to call based on the number of games.
